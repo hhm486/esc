@@ -1,0 +1,842 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>종합 지출 및 빚 장부 관리 (모바일 최적화)</title>
+    <style>
+        :root {
+            --bg-color: #f4f6f9;
+            --card-bg: #ffffff;
+            --text-color: #333333;
+            --border-color: #ddd;
+            --primary-color: #4a90e2;
+            --primary-hover: #357abd;
+            --danger-color: #e74c3c;
+            --danger-hover: #c0392b;
+            --table-header: #f8f9fa;
+        }
+
+        [data-theme="dark"] {
+            --bg-color: #121212;
+            --card-bg: #1e1e1e;
+            --text-color: #e0e0e0;
+            --border-color: #333333;
+            --primary-color: #3a7bc8;
+            --primary-hover: #2a5fa5;
+            --danger-color: #cf6679;
+            --danger-hover: #b54f61;
+            --table-header: #2d2d2d;
+        }
+
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            background-color: var(--bg-color);
+            color: var(--text-color);
+            margin: 0;
+            padding: 10px;
+            transition: background-color 0.3s, color 0.3s;
+        }
+
+        .main-layout {
+            display: flex;
+            flex-direction: column;
+            gap: 15px;
+            max-width: 1000px;
+            margin: 0 auto;
+        }
+
+        @media (min-width: 768px) {
+            .main-layout {
+                flex-direction: row;
+            }
+        }
+
+        .sidebar {
+            width: 100%;
+            flex-shrink: 0;
+            display: flex;
+            flex-direction: column;
+            gap: 15px;
+        }
+
+        @media (min-width: 768px) {
+            .sidebar {
+                width: 280px;
+                position: sticky;
+                top: 15px;
+                height: fit-content;
+            }
+        }
+
+        .calendar-box, .widget-box {
+            background: var(--card-bg);
+            border: 1px solid var(--border-color);
+            border-radius: 8px;
+            padding: 12px;
+            box-shadow: 0 2px 4px rgba(0,0,0,0.05);
+        }
+
+        .cal-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 8px;
+            font-weight: bold;
+            font-size: 14px;
+        }
+
+        .cal-header button {
+            background: none;
+            border: 1px solid var(--border-color);
+            color: var(--text-color);
+            padding: 4px 10px;
+            cursor: pointer;
+            border-radius: 4px;
+        }
+
+        .cal-grid {
+            display: grid;
+            grid-template-columns: repeat(7, 1fr);
+            gap: 2px;
+            text-align: center;
+            font-size: 11px;
+        }
+
+        .cal-day-name {
+            font-weight: bold;
+            padding: 4px 0;
+            color: var(--primary-color);
+        }
+
+        .cal-day {
+            padding: 5px 0;
+            border-radius: 4px;
+        }
+
+        .cal-day.today {
+            background-color: var(--primary-color);
+            color: white;
+            font-weight: bold;
+        }
+
+        .widget-title {
+            font-size: 13px;
+            font-weight: bold;
+            margin-bottom: 6px;
+            display: flex;
+            justify-content: space-between;
+        }
+
+        .progress-bar-container {
+            width: 100%;
+            background-color: var(--border-color);
+            border-radius: 6px;
+            height: 14px;
+            overflow: hidden;
+            margin-bottom: 6px;
+        }
+
+        .progress-bar-fill {
+            height: 100%;
+            background-color: var(--primary-color);
+            width: 0%;
+            transition: width 0.4s ease;
+        }
+
+        .progress-text {
+            font-size: 11px;
+            text-align: right;
+            color: var(--text-color);
+        }
+
+        .content-area {
+            flex: 1;
+            min-width: 0;
+        }
+
+        header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 15px;
+        }
+
+        h1 { margin: 0; font-size: 18px; }
+
+        .theme-toggle {
+            background: var(--primary-color);
+            color: white;
+            border: none;
+            padding: 6px 12px;
+            border-radius: 4px;
+            cursor: pointer;
+            font-weight: bold;
+            font-size: 11px;
+        }
+        .theme-toggle:hover { background: var(--primary-hover); }
+
+        .section-group {
+            margin-bottom: 20px;
+        }
+
+        .section-title {
+            font-size: 15px;
+            margin-bottom: 10px;
+            border-left: 4px solid var(--primary-color);
+            padding-left: 8px;
+        }
+
+        .grid-container {
+            display: grid;
+            grid-template-columns: 1fr;
+            gap: 15px;
+        }
+
+        @media (min-width: 768px) {
+            .grid-container {
+                grid-template-columns: repeat(auto-fit, minmax(350px, 1fr));
+            }
+        }
+
+        .card-box {
+            background: var(--card-bg);
+            border: 1px solid var(--border-color);
+            border-radius: 8px;
+            padding: 15px;
+            box-shadow: 0 2px 4px rgba(0,0,0,0.05);
+            overflow-x: auto;
+        }
+
+        .card-box h3 {
+            margin-top: 0;
+            font-size: 14px;
+            border-bottom: 2px solid var(--border-color);
+            padding-bottom: 6px;
+        }
+
+        table {
+            width: 100%;
+            border-collapse: collapse;
+            margin-bottom: 10px;
+            min-width: 280px;
+        }
+
+        th, td {
+            border: 1px solid var(--border-color);
+            padding: 6px;
+            text-align: left;
+            font-size: 11px;
+        }
+
+        th { background-color: var(--table-header); }
+
+        .input-group {
+            display: flex;
+            flex-direction: column;
+            gap: 6px;
+            margin-top: 8px;
+        }
+
+        @media (min-width: 480px) {
+            .input-group {
+                flex-direction: row;
+            }
+        }
+
+        input {
+            padding: 6px;
+            border: 1px solid var(--border-color);
+            border-radius: 4px;
+            background-color: var(--card-bg);
+            color: var(--text-color);
+            flex: 1;
+            font-size: 11px;
+            width: 100%;
+            box-sizing: border-box;
+        }
+
+        button {
+            padding: 6px 10px;
+            border: none;
+            border-radius: 4px;
+            cursor: pointer;
+            font-weight: bold;
+            font-size: 11px;
+        }
+
+        .btn-add { background-color: var(--primary-color); color: white; width: 100%; }
+        @media (min-width: 480px) { .btn-add { width: auto; } }
+        .btn-add:hover { background-color: var(--primary-hover); }
+
+        .btn-edit { background-color: #f39c12; color: white; padding: 2px 5px; font-size: 10px; }
+        .btn-edit:hover { background-color: #d68910; }
+
+        .btn-delete { background-color: var(--danger-color); color: white; padding: 2px 5px; font-size: 10px; }
+        .btn-delete:hover { background-color: var(--danger-hover); }
+
+        .total-row {
+            font-weight: bold;
+            background-color: var(--table-header);
+        }
+
+        .fixed-budget-summary {
+            background-color: rgba(74, 144, 226, 0.1);
+            border: 1px solid var(--primary-color);
+            padding: 10px;
+            border-radius: 6px;
+            margin-bottom: 10px;
+            font-size: 12px;
+            display: flex;
+            justify-content: space-between;
+            flex-wrap: wrap;
+            gap: 5px;
+        }
+
+        .th-edit-btn {
+            background: none;
+            border: 1px solid var(--border-color);
+            color: var(--text-color);
+            padding: 1px 4px;
+            font-size: 9px;
+            cursor: pointer;
+            border-radius: 3px;
+            margin-left: 5px;
+        }
+        .th-edit-btn:hover {
+            background-color: var(--primary-color);
+            color: white;
+            border-color: var(--primary-color);
+        }
+    </style>
+</head>
+<body data-theme="light">
+
+<div class="main-layout">
+    <div class="sidebar">
+        <div class="calendar-box">
+            <div class="cal-header">
+                <button onclick="changeMonth(-1)">&lt;</button>
+                <span id="cal-title">2026년 9월</span>
+                <button onclick="changeMonth(1)">&gt;</button>
+            </div>
+            <div class="cal-grid">
+                <div class="cal-day-name">일</div>
+                <div class="cal-day-name">월</div>
+                <div class="cal-day-name">화</div>
+                <div class="cal-day-name">수</div>
+                <div class="cal-day-name">목</div>
+                <div class="cal-day-name">금</div>
+                <div class="cal-day-name">토</div>
+            </div>
+            <div id="cal-days" class="cal-grid" style="margin-top: 5px;"></div>
+        </div>
+
+        <div class="widget-box">
+            <div class="widget-title">
+                <span>차 할부 원금 잔액</span>
+                <span id="car-loan-percent" style="color: var(--primary-color);">0%</span>
+            </div>
+            <div class="progress-bar-container">
+                <div id="car-loan-fill" class="progress-bar-fill"></div>
+            </div>
+            <div class="progress-text">
+                <span id="car-loan-current">0원</span> / 6,000,000원
+            </div>
+        </div>
+    </div>
+
+    <div class="content-area">
+        <header>
+            <h1>📋 지출 및 빚 장부</h1>
+            <button class="theme-toggle" onclick="toggleTheme()">다크모드</button>
+        </header>
+
+        <!-- 1. 기본 장부 (미래의 빚) -->
+        <div class="section-group">
+            <h2 class="section-title">기본 장부 (미래의 빚 / 실시간 카드 연동)</h2>
+            <div class="card-box">
+                <div class="fixed-budget-summary">
+                    <div>기준 고정값: <b>2,400,000원</b></div>
+                    <div><span id="lbl-remain-1">10월</span> 남은 금액: <b id="remain-main-1" style="color: var(--primary-color);">0원</b></div>
+                    <div><span id="lbl-remain-2">11월</span> 남은 금액: <b id="remain-main-2" style="color: var(--primary-color);">0원</b></div>
+                </div>
+                <table>
+                    <thead>
+                        <tr>
+                            <th>항목명</th>
+                            <th><span id="th-col-1">10월 금액</span> <button class="th-edit-btn" onclick="editColumnName(1)">수정</button></th>
+                            <th><span id="th-col-2">11월 금액 (카드 합산)</span> <button class="th-edit-btn" onclick="editColumnName(2)">수정</button></th>
+                            <th>관리</th>
+                        </tr>
+                    </thead>
+                    <tbody id="list-main"></tbody>
+                    <tfoot>
+                        <tr class="total-row">
+                            <td>합계</td>
+                            <td id="total-main-1">0</td>
+                            <td id="total-main-2">0</td>
+                            <td></td>
+                        </tr>
+                    </tfoot>
+                </table>
+                <div class="input-group">
+                    <input type="text" id="main-name" placeholder="항목명">
+                    <input type="number" id="main-val1" placeholder="첫 번째 달 금액">
+                    <input type="number" id="main-val2" placeholder="두 번째 달 금액">
+                    <button class="btn-add" onclick="addItem('main')">추가</button>
+                </div>
+            </div>
+        </div>
+
+        <!-- 2. 고정비 카드별 세부 내역 -->
+        <div class="section-group">
+            <h2 class="section-title">고정비 카드별 세부 내역</h2>
+            <div class="grid-container">
+                <div class="card-box">
+                    <h3>현대카드</h3>
+                    <table>
+                        <thead><tr><th>항목/내용</th><th>기간/상태</th><th>금액</th><th>관리</th></tr></thead>
+                        <tbody id="list-fixed-hyundai"></tbody>
+                        <tfoot><tr class="total-row"><td colspan="2">합계</td><td id="total-fixed-hyundai" colspan="2">0</td></tr></tfoot>
+                    </table>
+                    <div class="input-group">
+                        <input type="text" id="fx-hd-name" placeholder="항목명">
+                        <input type="text" id="fx-hd-sub" placeholder="기간/상태">
+                        <input type="number" id="fx-hd-price" placeholder="금액">
+                        <button class="btn-add" onclick="addItem('fixed_hyundai')">추가</button>
+                    </div>
+                </div>
+
+                <div class="card-box">
+                    <h3>삼성카드</h3>
+                    <table>
+                        <thead><tr><th>항목/내용</th><th>금액</th><th>관리</th></tr></thead>
+                        <tbody id="list-fixed-samsung"></tbody>
+                        <tfoot><tr class="total-row"><td>합계</td><td id="total-fixed-samsung" colspan="2">0</td></tr></tfoot>
+                    </table>
+                    <div class="input-group">
+                        <input type="text" id="fx-ss-name" placeholder="항목명">
+                        <input type="number" id="fx-ss-price" placeholder="금액">
+                        <button class="btn-add" onclick="addItem('fixed_samsung')">추가</button>
+                    </div>
+                </div>
+
+                <div class="card-box">
+                    <h3>우리은행</h3>
+                    <table>
+                        <thead><tr><th>항목/내용</th><th>금액</th><th>관리</th></tr></thead>
+                        <tbody id="list-fixed-woori"></tbody>
+                        <tfoot><tr class="total-row"><td>합계</td><td id="total-fixed-woori" colspan="2">0</td></tr></tfoot>
+                    </table>
+                    <div class="input-group">
+                        <input type="text" id="fx-wo-name" placeholder="항목명">
+                        <input type="number" id="fx-wo-price" placeholder="금액">
+                        <button class="btn-add" onclick="addItem('fixed_woori')">추가</button>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- 3. 카드빚 및 대출 정산 -->
+        <div class="section-group">
+            <h2 class="section-title">카드빚 / 대출 정리 (차 대출 자동 차감)</h2>
+            <div class="card-box">
+                <table>
+                    <thead><tr><th>구분 / 대출명</th><th>금액</th><th>만기일 / 비고</th><th>관리</th></tr></thead>
+                    <tbody id="list-loan"></tbody>
+                    <tfoot><tr class="total-row"><td>합계</td><td id="total-loan" colspan="3">0</td></tr></tfoot>
+                </table>
+                <div class="input-group">
+                    <input type="text" id="loan-name" placeholder="대출/카드명">
+                    <input type="number" id="loan-price" placeholder="금액">
+                    <input type="text" id="loan-date" placeholder="만기일/비고">
+                    <button class="btn-add" onclick="addItem('loan')">추가</button>
+                </div>
+            </div>
+        </div>
+
+        <!-- 4. 실시간 사용 금액 -->
+        <div class="section-group">
+            <h2 class="section-title">실시간 사용 금액</h2>
+            <div class="grid-container">
+                <div class="card-box">
+                    <h3>현대카드 (실시간)</h3>
+                    <table>
+                        <thead><tr><th>날짜</th><th>내용</th><th>금액</th><th>관리</th></tr></thead>
+                        <tbody id="list-rt-hyundai"></tbody>
+                        <tfoot><tr class="total-row"><td colspan="2">합계</td><td id="total-rt-hyundai" colspan="2">0</td></tr></tfoot>
+                    </table>
+                    <div class="input-group">
+                        <input type="text" id="rt-hd-date" placeholder="날짜(예:2026-09-02)">
+                        <input type="text" id="rt-hd-content" placeholder="내용">
+                        <input type="number" id="rt-hd-price" placeholder="금액">
+                        <button class="btn-add" onclick="addItem('rt_hyundai')">추가</button>
+                    </div>
+                </div>
+
+                <div class="card-box">
+                    <h3>삼성카드 (실시간)</h3>
+                    <table>
+                        <thead><tr><th>날짜</th><th>내용</th><th>금액</th><th>관리</th></tr></thead>
+                        <tbody id="list-rt-samsung"></tbody>
+                        <tfoot><tr class="total-row"><td colspan="2">합계</td><td id="total-rt-samsung" colspan="2">0</td></tr></tfoot>
+                    </table>
+                    <div class="input-group">
+                        <input type="text" id="rt-ss-date" placeholder="날짜(예:2026-09-08)">
+                        <input type="text" id="rt-ss-content" placeholder="내용">
+                        <input type="number" id="rt-ss-price" placeholder="금액">
+                        <button class="btn-add" onclick="addItem('rt_samsung')">추가</button>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<script>
+    let today = new Date();
+    let currentYear = today.getFullYear();
+    let currentMonth = today.getMonth();
+
+    // 컬럼명 관리 변수
+    let colNames = {
+        col1: "10월 금액",
+        col2: "11월 금액 (카드 합산)"
+    };
+
+    function editColumnName(colNum) {
+        let key = 'col' + colNum;
+        let currentName = colNames[key];
+        let newName = prompt('변경할 카테고리 이름을 입력하세요:', currentName);
+        if(newName !== null && newName.trim() !== '') {
+            colNames[key] = newName.trim();
+            render();
+        }
+    }
+
+    function renderCalendar() {
+        const title = document.getElementById('cal-title');
+        const daysContainer = document.getElementById('cal-days');
+        
+        title.innerText = `${currentYear}년 ${currentMonth + 1}월`;
+        daysContainer.innerHTML = '';
+
+        const firstDayIndex = new Date(currentYear, currentMonth, 1).getDay();
+        const lastDay = new Date(currentYear, currentMonth + 1, 0).getDate();
+
+        for (let i = 0; i < firstDayIndex; i++) {
+            daysContainer.innerHTML += `<div></div>`;
+        }
+
+        for (let i = 1; i <= lastDay; i++) {
+            let isToday = (i === today.getDate() && currentMonth === today.getMonth() && currentYear === today.getFullYear());
+            let cls = isToday ? 'cal-day today' : 'cal-day';
+            daysContainer.innerHTML += `<div class="${cls}">${i}</div>`;
+        }
+    }
+
+    function changeMonth(direction) {
+        currentMonth += direction;
+        if (currentMonth > 11) {
+            currentMonth = 0;
+            currentYear++;
+        } else if (currentMonth < 0) {
+            currentMonth = 11;
+            currentYear--;
+        }
+        renderCalendar();
+    }
+
+    let data = {
+        main: [
+            { id: 1, name: "현대(12일)", val1: 505349, baseVal2: 227066, isCardDynamic: 'hyundai' },
+            { id: 2, name: "삼성(13일)", val1: 694627, baseVal2: 572550, isCardDynamic: 'samsung' },
+            { id: 3, name: "공과금(우리)", val1: 806540, val2: 806540 },
+            { id: 4, name: "닝닝유지비", val1: 30000, val2: 30000 },
+            { id: 5, name: "홍홍멜(토스)", val1: 45000, val2: 45000 },
+            { id: 6, name: "적금(새말)", val1: 100000, val2: 100000 },
+            { id: 7, name: "카드값갚기", val1: 158370, val2: 200000 },
+            { id: 8, name: "증액보증금", val1: 30000, val2: 50000 }
+        ],
+        fixed_hyundai: [
+            { id: 1, name: "폴드", sub: "2027년 1월 끝", price: 63100 },
+            { id: 2, name: "아이폰미니", sub: "2026년 11월 끝", price: 96000 },
+            { id: 3, name: "머리", sub: "2026년 10월 끝", price: 20865 },
+            { id: 4, name: "울트라22", sub: "2026년 11월 끝", price: 62370 },
+            { id: 5, name: "정주리", sub: "매달", price: 36600 },
+            { id: 6, name: "멜로디", sub: "2026년 11월 끝", price: 33566 },
+            { id: 7, name: "se2", sub: "26년11월 끝", price: 55700 },
+            { id: 8, name: "모래", sub: "-", price: 38100 }
+        ],
+        fixed_samsung: [
+            { id: 1, name: "공청", price: 23900 }, { id: 2, name: "정수기", price: 33900 },
+            { id: 3, name: "통신료", price: 23100 }, { id: 4, name: "관리비", price: 160000 },
+            { id: 5, name: "도시가스", price: 5250 }, { id: 6, name: "자동차보험", price: 162500 },
+            { id: 7, name: "쇼파(27.8)", price: 41000 }, { id: 8, name: "삼성케어", price: 9800 },
+            { id: 9, name: "핸드폰요금", price: 70397 }, { id: 10, name: "쇼파(12월)", price: 38200 },
+            { id: 11, name: "키보드(11월)", price: 23000 }, { id: 12, name: "멜론", price: 6900 }
+        ],
+        fixed_woori: [
+            { id: 1, name: "디비손해보험", price: 29200 }, { id: 2, name: "보험", price: 27600 },
+            { id: 3, name: "보험", price: 54000 }, { id: 4, name: "보험", price: 93650 },
+            { id: 5, name: "월세", price: 140250 }, { id: 6, name: "보험", price: 75347 },
+            { id: 7, name: "닝닝할부(2028년 5월)", price: 276593 }, { id: 8, name: "이자", price: 55000 },
+            { id: 9, name: "주유비", price: 50000 }, { id: 10, name: "네이버멤버쉽", price: 4900 }
+        ],
+        loan: [
+            { id: 1, price: 63100, date: "27년 2월", name: "폴드7" },
+            { id: 2, price: 20835, date: "26년 10월", name: "머리" },
+            { id: 3, price: 62200, date: "26년 10월", name: "당근(10월선결제)" },
+            { id: 4, price: 96400, date: "26년 10월", name: "당근(10월선결제)" },
+            { id: 5, price: 33500, date: "26년 11월", name: "이노병원" },
+            { id: 6, price: 55700, date: "26년 11월", name: "당근" },
+            { id: 7, price: 38200, date: "26년 12월", name: "쇼파(11월선결제)" },
+            { id: 8, price: 23000, date: "26년 12월", name: "키보드(11월선결제)" },
+            { id: 9, price: 180561, date: "27년 4월", name: "차 보험" },
+            { id: 10, price: 41000, date: "27년 8월", name: "쇼파" },
+            { id: 11, price: 700000, date: "1931-04-01", name: "청약대출" },
+            { id: 12, price: 1289164, date: "2029-08-08", name: "청약대출" },
+            { id: 13, price: 17000000, date: "2027-09-27", name: "전세대출(우리은행)" },
+            { id: 14, price: 4845645, date: "2028-04-05", name: "차 대출", isAutoDeduct: true, baseDate: "2028-04-05", monthlyAmount: 276593, initialPrincipal: 6000000 }
+        ],
+        rt_hyundai: [
+            { id: 1, date: "2026-09-02", content: "능소언니목찜질기", price: 7145 },
+            { id: 2, date: "2026-09-02", content: "개나리콘", price: 7900 },
+            { id: 3, date: "2026-09-03", content: "운동용품", price: 8400 },
+            { id: 4, date: "2026-09-01", content: "지티커피", price: 4500 },
+            { id: 5, date: "2026-09-01", content: "안과", price: 6200 },
+            { id: 6, date: "2026-09-01", content: "안약", price: 3400 },
+            { id: 7, date: "2026-09-03", content: "알리", price: 28203 },
+            { id: 8, date: "2026-09-03", content: "르빵17", price: 11800 },
+            { id: 9, date: "2026-09-04", content: "그래빗", price: 17000 },
+            { id: 10, date: "2026-09-07", content: "그래빗", price: 4500 }
+        ],
+        rt_samsung: [
+            { id: 1, date: "2026-09-02", content: "치킨", price: 21500 },
+            { id: 2, date: "2026-09-02", content: "다이소", price: 3000 },
+            { id: 3, date: "2026-09-03", content: "커피", price: 4000 },
+            { id: 4, date: "2026-09-01", content: "키보드", price: 17000 },
+            { id: 5, date: "2026-09-01", content: "콩국수", price: 19000 },
+            { id: 6, date: "2026-09-08", content: "커피", price: 1800 },
+            { id: 7, date: "2026-09-08", content: "인지", price: 1000 },
+            { id: 8, date: "2026-09-09", content: "점심", price: 7980 },
+            { id: 9, date: "2026-09-10", content: "반찬", price: 12000 },
+            { id: 10, date: "2026-09-10", content: "쿠팡멤버쉽", price: 7980 },
+            { id: 11, date: "2026-09-10", content: "휴지통", price: 1420 }
+        ]
+    };
+
+    function calculateDynamicPrices() {
+        let rtHdSum = data.rt_hyundai.reduce((acc, cur) => acc + Number(cur.price), 0);
+        let rtSsSum = data.rt_samsung.reduce((acc, cur) => acc + Number(cur.price), 0);
+
+        data.main.forEach(i => {
+            if (i.isCardDynamic === 'hyundai') {
+                i.val2 = (i.baseVal2 !== undefined ? i.baseVal2 : 227066) + rtHdSum;
+            } else if (i.isCardDynamic === 'samsung') {
+                i.val2 = (i.baseVal2 !== undefined ? i.baseVal2 : 572550) + rtSsSum;
+            }
+        });
+
+        data.loan.forEach(i => {
+            if (i.isAutoDeduct) {
+                let base = new Date(i.baseDate);
+                let now = new Date();
+                let diffMonths = (now.getFullYear() - base.getFullYear()) * 12 + (now.getMonth() - base.getMonth());
+                if (now.getDate() < base.getDate()) {
+                    diffMonths -= 1;
+                }
+                if (diffMonths < 0) diffMonths = 0;
+                
+                let deducted = 4845645 - (diffMonths * i.monthlyAmount);
+                i.price = deducted < 0 ? 0 : deducted;
+
+                updateCarLoanWidget(i.price, 6000000);
+            }
+        });
+    }
+
+    function updateCarLoanWidget(currentVal, totalVal) {
+        let percent = (currentVal / totalVal) * 100;
+        if (percent < 0) percent = 0;
+        if (percent > 100) percent = 100;
+
+        document.getElementById('car-loan-fill').style.width = percent.toFixed(1) + '%';
+        document.getElementById('car-loan-percent').innerText = percent.toFixed(1) + '%';
+        document.getElementById('car-loan-current').innerText = Number(currentVal).toLocaleString() + '원';
+    }
+
+    function render() {
+        calculateDynamicPrices();
+
+        // 테이블 헤더 및 요약창 레이블 반영
+        document.getElementById('th-col-1').innerText = colNames.col1;
+        document.getElementById('th-col-2').innerText = colNames.col2;
+        document.getElementById('lbl-remain-1').innerText = colNames.col1.replace(' 금액', '').replace(' (카드 합산)', '');
+        document.getElementById('lbl-remain-2').innerText = colNames.col2.replace(' 금액', '').replace(' (카드 합산)', '');
+
+        let mBody = document.getElementById('list-main');
+        mBody.innerHTML = '';
+        let t1 = 0, t2 = 0;
+        data.main.forEach(i => {
+            t1 += Number(i.val1); t2 += Number(i.val2);
+            mBody.innerHTML += `<tr><td>${i.name}</td><td>${Number(i.val1).toLocaleString()}원</td><td>${Number(i.val2).toLocaleString()}원</td><td><button class="btn-edit" onclick="editItem('main', ${i.id})">수정</button> <button class="btn-delete" onclick="deleteItem('main', ${i.id})">삭제</button></td></tr>`;
+        });
+        document.getElementById('total-main-1').innerText = t1.toLocaleString() + '원';
+        document.getElementById('total-main-2').innerText = t2.toLocaleString() + '원';
+
+        let fixedBudget = 2400000;
+        let remain1 = fixedBudget - t1;
+        let remain2 = fixedBudget - t2;
+        
+        let rem1El = document.getElementById('remain-main-1');
+        let rem2El = document.getElementById('remain-main-2');
+        
+        rem1El.innerText = remain1.toLocaleString() + '원';
+        rem1El.style.color = remain1 < 0 ? 'var(--danger-color)' : 'var(--primary-color)';
+        
+        rem2El.innerText = remain2.toLocaleString() + '원';
+        rem2El.style.color = remain2 < 0 ? 'var(--danger-color)' : 'var(--primary-color)';
+
+        renderTable('fixed_hyundai', ['name', 'sub', 'price']);
+        renderTable('fixed_samsung', ['name', 'price']);
+        renderTable('fixed_woori', ['name', 'price']);
+        renderTable('loan', ['name', 'price', 'date']);
+        renderTable('rt_hyundai', ['date', 'content', 'price']);
+        renderTable('rt_samsung', ['date', 'content', 'price']);
+    }
+
+    function renderTable(category, keys) {
+        let tbody = document.getElementById(`list-${category.replace('_','-')}`);
+        tbody.innerHTML = '';
+        let sum = 0;
+        data[category].forEach(i => {
+            sum += Number(i.price || 0);
+            let tr = '<tr>';
+            keys.forEach(k => {
+                let val = i[k] !== undefined ? i[k] : '';
+                if(k === 'price') val = Number(val).toLocaleString() + '원';
+                tr += `<td>${val}</td>`;
+            });
+            tr += `<td><button class="btn-edit" onclick="editItem('${category}', ${i.id})">수정</button> <button class="btn-delete" onclick="deleteItem('${category}', ${i.id})">삭제</button></td></tr>`;
+            tbody.innerHTML += tr;
+        });
+        let totalTdId = `total-${category.replace('_','-')}`;
+        document.getElementById(totalTdId).innerText = sum.toLocaleString() + '원';
+    }
+
+    function addItem(cat) {
+        if(cat === 'main') {
+            let name = document.getElementById('main-name').value;
+            let v1 = document.getElementById('main-val1').value;
+            let v2 = document.getElementById('main-val2').value;
+            if(!name) return alert('항목명을 입력하세요.');
+            data.main.push({id: Date.now(), name, val1: v1||0, val2: v2||0});
+            document.getElementById('main-name').value = ''; document.getElementById('main-val1').value = ''; document.getElementById('main-val2').value = '';
+        } else if(cat === 'fixed_hyundai') {
+            let name = document.getElementById('fx-hd-name').value;
+            let sub = document.getElementById('fx-hd-sub').value;
+            let price = document.getElementById('fx-hd-price').value;
+            if(!name || !price) return alert('항목명과 금액을 입력하세요.');
+            data.fixed_hyundai.push({id: Date.now(), name, sub, price: Number(price)});
+            document.getElementById('fx-hd-name').value = ''; document.getElementById('fx-hd-sub').value = ''; document.getElementById('fx-hd-price').value = '';
+        } else if(cat === 'fixed_samsung') {
+            let name = document.getElementById('fx-ss-name').value;
+            let price = document.getElementById('fx-ss-price').value;
+            if(!name || !price) return alert('항목명과 금액을 입력하세요.');
+            data.fixed_samsung.push({id: Date.now(), name, price: Number(price)});
+            document.getElementById('fx-ss-name').value = ''; document.getElementById('fx-ss-price').value = '';
+        } else if(cat === 'fixed_woori') {
+            let name = document.getElementById('fx-wo-name').value;
+            let price = document.getElementById('fx-wo-price').value;
+            if(!name || !price) return alert('항목명과 금액을 입력하세요.');
+            data.fixed_woori.push({id: Date.now(), name, price: Number(price)});
+            document.getElementById('fx-wo-name').value = ''; document.getElementById('fx-wo-price').value = '';
+        } else if(cat === 'loan') {
+            let name = document.getElementById('loan-name').value;
+            let price = document.getElementById('loan-price').value;
+            let date = document.getElementById('loan-date').value;
+            if(!name || !price) return alert('명칭과 금액을 입력하세요.');
+            data.loan.push({id: Date.now(), name, price: Number(price), date});
+            document.getElementById('loan-name').value = ''; document.getElementById('loan-price').value = ''; document.getElementById('loan-date').value = '';
+        } else if(cat === 'rt_hyundai') {
+            let date = document.getElementById('rt-hd-date').value;
+            let content = document.getElementById('rt-hd-content').value;
+            let price = document.getElementById('rt-hd-price').value;
+            if(!content || !price) return alert('내용과 금액을 입력하세요.');
+            data.rt_hyundai.push({id: Date.now(), date: date || new Date().toISOString().slice(0,10), content, price: Number(price)});
+            document.getElementById('rt-hd-date').value = ''; document.getElementById('rt-hd-content').value = ''; document.getElementById('rt-hd-price').value = '';
+        } else if(cat === 'rt_samsung') {
+            let date = document.getElementById('rt-ss-date').value;
+            let content = document.getElementById('rt-ss-content').value;
+            let price = document.getElementById('rt-ss-price').value;
+            if(!content || !price) return alert('내용과 금액을 입력하세요.');
+            data.rt_samsung.push({id: Date.now(), date: date || new Date().toISOString().slice(0,10), content, price: Number(price)});
+            document.getElementById('rt-ss-date').value = ''; document.getElementById('rt-ss-content').value = ''; document.getElementById('rt-ss-price').value = '';
+        }
+        render();
+    }
+
+    function deleteItem(cat, id) {
+        let item = data[cat].find(i => i.id === id);
+        if(item && item.isAutoDeduct) return alert('자동 차감되는 차 대출 항목은 삭제할 수 없습니다.');
+
+        if(confirm('정말 삭제하시겠습니까?')) {
+            data[cat] = data[cat].filter(i => i.id !== id);
+            render();
+        }
+    }
+
+    function editItem(cat, id) {
+        let item = data[cat].find(i => i.id === id);
+        if(!item) return;
+
+        if(cat === 'main') {
+            item.name = prompt('항목명 수정:', item.name) ?? item.name;
+            item.val1 = Number(prompt(`${colNames.col1} 수정:`, item.val1)) || 0;
+            if(item.isCardDynamic) {
+                let currentRtSum = 0;
+                if(item.isCardDynamic === 'hyundai') {
+                    currentRtSum = data.rt_hyundai.reduce((acc, cur) => acc + Number(cur.price), 0);
+                } else if(item.isCardDynamic === 'samsung') {
+                    currentRtSum = data.rt_samsung.reduce((acc, cur) => acc + Number(cur.price), 0);
+                }
+                let newTotalVal2 = Number(prompt(`${colNames.col2} 수정:`, item.val2)) || item.val2;
+                item.baseVal2 = newTotalVal2 - currentRtSum; 
+            } else {
+                item.val2 = Number(prompt(`${colNames.col2} 수정:`, item.val2)) || 0;
+            }
+        } else if(cat === 'loan') {
+            item.name = prompt('명칭 수정:', item.name) ?? item.name;
+            if(!item.isAutoDeduct) {
+                item.price = Number(prompt('금액 수정:', item.price)) || 0;
+            } else {
+                alert('차 대출 항목은 경과 시간에 따라 자동으로 차감됩니다.');
+            }
+            item.date = prompt('만기일 수정:', item.date) ?? item.date;
+        } else if(cat.startsWith('rt_')) {
+            item.date = prompt('날짜 수정:', item.date) ?? item.date;
+            item.content = prompt('내용 수정:', item.content) ?? item.content;
+            item.price = Number(prompt('금액 수정:', item.price)) || 0;
+        } else {
+            item.name = prompt('항목명 수정:', item.name) ?? item.name;
+            if(item.sub !== undefined) item.sub = prompt('기간/상태 수정:', item.sub) ?? item.sub;
+            item.price = Number(prompt('금액 수정:', item.price)) || 0;
+        }
+        render();
+    }
+
+    function toggleTheme() {
+        let body = document.body;
+        let next = body.getAttribute('data-theme') === 'light' ? 'dark' : 'light';
+        body.setAttribute('data-theme', next);
+        document.querySelector('.theme-toggle').innerText = next === 'light' ? '다크모드' : '라이트모드';
+    }
+
+    renderCalendar();
+    render();
+</script>
+
+</body>
+</html>
